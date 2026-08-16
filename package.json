@@ -1,0 +1,13 @@
+{
+  "name": "ddpay-support",
+  "version": "1.0.0",
+  "description": "Local server to clone DDPay Official Support and log data locally",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  }
+}
